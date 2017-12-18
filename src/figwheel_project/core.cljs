@@ -4,47 +4,62 @@
             [om.dom :as dom]
             [figwheel-project.config :as config]))
 
-(defui Country-list
-  Object
-  (render [this]
-    (apply dom/select nil
-      (map  (fn [[k v]] (dom/option nil v))
-        (get (om/props this) :FIPS)))))
+(comment
+  (defui Country-list
+    Object
+    (render [this]
+      (apply dom/select nil
+        (map (fn [[k v]] (dom/option nil v))
+          (get (om/props this) :FIPS)))))
 
-(def country-list (om/factory Country-list))
+  (def country-list (om/factory Country-list)))
 
 
-(def app-state (atom {:count 0}))
+(def app-state
+  (atom
+    {:app/title "Animals"
+     :animals/list
+                [[1 "Ant"] [2 "Antelope"] [3 "Bird"] [4 "Cat"] [5 "Dog"]
+                 [6 "Lion"] [7 "Mouse"] [8 "Monkey"] [9 "Snake"] [10 "Zebra"]]}))
 
-(defn read [{:keys [state] :as env} key params]
+(defmulti read (fn [env key params] key))
+
+(defmethod read :default
+  [{:keys [state] :as env} key params]
   (let [st @state]
     (if-let [[_ value] (find st key)]
       {:value value}
       {:value :not-found})))
 
-(defn mutate [{:keys [state] :as env} key params]
-  (if (= 'increment key)
-    {:value {:keys [:count]}
-     :action #(swap! state update-in [:count] inc)}
-    {:value :not-found}))
+(defmethod read :animals/list
+  [{:keys [state] :as env} key {:keys [start end]}]
+  {:value (subvec (:animals/list @state) start end)})
 
-(defui Counter
+(defui AnimalsList
+  static om/IQueryParams
+  (params [this]
+    {:start 0 :end 10})
   static om/IQuery
-  (query [this] [:count]) ;; Defines location of data in pull syntax
+  (query [this]
+    '[:app/title (:animals/list {:start ?start :end ?end})])
   Object
   (render [this]
-    (let [{:keys [count]} (om/props this)]
+    (let [{:keys [app/title animals/list]} (om/props this)]
       (dom/div nil
-        (dom/span nil (str "Count: " count))
-        (dom/button
-          #js {:onClick
-               (fn [e] (om/transact! this '[(increment)]))}
-          "Click me!")))))
+        (dom/h2 nil title)
+        (apply dom/ul nil
+          (map
+            (fn [[i name]]
+              (dom/li nil (str i ". " name)))
+            list))))))
 
 (def reconciler
   (om/reconciler
     {:state app-state
-     :parser (om/parser {:read read :mutate mutate})}))
+     :parser (om/parser {:read read})}))
 
 (om/add-root! reconciler
-  Counter (gdom/getElement "app"))
+  AnimalsList (gdom/getElement "app"))
+
+;; try chaning a query params using set-query!
+;; (om/set-query! (om/class->any reconciler AnimalsList) {:params {:start 0 :end 5}})
