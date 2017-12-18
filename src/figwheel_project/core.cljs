@@ -1,17 +1,20 @@
 (ns figwheel-project.core
-    (:require ))
+  (:require [goog.dom :as gdom]
+            [om.next :as om :refer-macros [defui]]
+            [om.dom :as dom]
+            [figwheel-project.config :as config]))
 
-(enable-console-print!)
+(def app-state (atom {:count 0}))
 
-(println "This text is printed from src/figwheel-project/core.cljs. Go ahead and edit it and see reloading in action.")
+(defui Country-list
+  Object
+  (render [this]
+    (apply dom/select nil
+      (map  (fn [[k v]] (dom/option nil v))
+        (get (om/props this) :FIPS)))))
 
-;; define your app data so that it doesn't get over-written on reload
+(def country-list (om/factory Country-list))
 
-(defonce app-state (atom {:text "Hello world!"}))
-
-
-(defn on-js-reload []
-  ;; optionally touch your app-state to force rerendering depending on
-  ;; your application
-  ;; (swap! app-state update-in [:__figwheel_counter] inc)
-)
+(js/ReactDOM.render
+  (country-list {:FIPS config/FIPS})
+  (gdom/getElement "app"))
